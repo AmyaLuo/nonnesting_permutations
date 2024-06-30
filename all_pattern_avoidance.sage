@@ -4,7 +4,7 @@ from collections import Counter
 import time
 
 start_time = time.time()
-n=6
+n=4
 # Generate the list of nonnesting permutations
 multiset = list(range(1,n+1))
 per = list(set(permutations(multiset)))

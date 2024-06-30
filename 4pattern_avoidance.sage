@@ -53,8 +53,6 @@ def gen_nonnesting(n):
         
         tab_list.append(transposed_sublist)
 
-    # lst1=[[[1,2],[2,1]]]
-    # lst2=[[[1,3],[2,4]],[[1,4],[2,3]]]
     #Get nonnesting
     nonnesting_list = [ [v for _,v in sorted((p,v) for v,pv in zip(v1,v2) for p in pv)]
             for v1 in per
@@ -62,8 +60,6 @@ def gen_nonnesting(n):
 
     nonnesting=[tuple(sublist) for sublist in nonnesting_list]
     return nonnesting
-
-# print(gen_nonnesting(3))
 
 def nonnesting_avoid(n,avoid):
     nonnesting = gen_nonnesting(n)
