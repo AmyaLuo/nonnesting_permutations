@@ -28,8 +28,14 @@
 ################################################################################
 #   2024/06/30: Ryan Maguire                                                   #
 #       Avoiding multiple if-then statements.                                  #
+#   2024/07/01: Ryan Maguire                                                   #
+#       General clean up, got rid of pylint warnings.                          #
 ################################################################################
 """
+
+# Pylint incorrectly thinks sage does not have the StandardTableaux class.
+# Disable this warning.
+# pylint: disable = no-member
 
 # 20240507. An attempt to improve user friendliness.
 # input n and Lambda, return nonnesting_pat
@@ -37,17 +43,20 @@
 import time
 import itertools
 import collections
-from sage.all_cmdline import *
+import sage.all
 
-def gen_nonnesting(n):
+def gen_nonnesting(index):
+    """
+        Generates list of non-nesting permutations.
+    """
 
     # Generate the list of nonnesting permutations
-    multiset = list(range(1, n + 1))
+    multiset = list(range(1, index + 1))
     per = list(set(itertools.permutations(multiset)))
     tab_list = []
 
     # Iterate through the sublists of the standard Young tableaux.
-    for sublist in StandardTableaux([n, n]).list():
+    for sublist in sage.all.StandardTableaux([index, index]).list():
 
         # Transpose the sublist to get elements at the same index
         transposed_sublist = list(map(list, zip(*sublist)))
@@ -63,42 +72,71 @@ def gen_nonnesting(n):
     return [tuple(sublist) for sublist in nonnesting_list]
 
 def get_word(pattern):
-    d = pattern & 0x03
-    c = (pattern >> 2) & 0x03
-    b = (pattern >> 4) & 0x03
-    a = (pattern >> 6) & 0x03
+    """
+        Given a four-element word pattern = abcd, with a, b, c, and d
+        being 2-bit integers (0 <= a, b, c, d <= 3), splits the pattern into
+        a, b, c, d and returns the list [a, b, c, d].
+    """
 
-    return [a, b, c, d]
+    # Bit-wise and with 3 = 0x03 gives the bottom two bits.
+    low = pattern & 0x03
 
-def diff_sign(x, y):
-    diff = y - x
+    # Bit-shift down and use bit-wise and to get the remaining elements.
+    mid_low = (pattern >> 2) & 0x03
+    mid_high = (pattern >> 4) & 0x03
+    high = (pattern >> 6) & 0x03
 
-    if diff > 0:
+    return [high, mid_high, mid_low, low]
+
+def diff_sign(left, right):
+    """
+        Computes the sign of the difference of two integers.
+    """
+    if left < right:
         return 1
 
-    if diff < 0:
+    if left > right:
         return -1
 
     return 0
 
 def get_word_diffs(pattern):
+    """
+        Given a pattern, such as "1123", computes the sign of
+        the differences for each pair of elements. The order is increasing
+        lexicographically, so (first slot, third slot) comes after
+        (zeroth slot, second slot). For "1123" we would get
+
+            word_diff = [
+                0, # 1 - 1 = 0
+                1, # 2 - 1 > 0
+                1, # 3 - 1 > 0
+                1, # 2 - 1 > 0
+                1, # 3 - 1 > 0
+                1, # 3 - 2 > 0
+            ]
+
+        This can probably be improved. For a pattern with word length n,
+        this returns a list of length n * (n + 1) / 2. We can probably
+        get away with a list of O(n) somehow, but this hasn't been explored.
+    """
     word = get_word(pattern)
-    word_diff = [
-        diff_sign(word[0], word[1]),
-        diff_sign(word[0], word[2]),
-        diff_sign(word[0], word[3]),
-        diff_sign(word[1], word[2]),
-        diff_sign(word[1], word[3]),
-        diff_sign(word[2], word[3])
+
+    # Loop through the elements lexicographically.
+    return [
+        diff_sign(word[left_index], word[right_index])
+        for left_index in range(3)
+        for right_index in range(left_index + 1, 4)
     ]
 
-    return word_diff
-
-def nonnesting_avoid(n, avoid):
-    nonnesting = gen_nonnesting(n)
+def nonnesting_avoid(index, avoid):
+    """
+        Counts how many times a pattern is avoided.
+    """
+    nonnesting = gen_nonnesting(index)
 
     # Remove patterns.
-    list_2n = list(range(1, 2*n + 1))
+    list_2n = list(range(1, 2*index + 1))
     com = list(itertools.combinations(list_2n, 4))
     cnt_pat = collections.Counter(nonnesting)
     word_diffs = [get_word_diffs(pattern) for pattern in avoid]
@@ -131,7 +169,7 @@ def nonnesting_avoid(n, avoid):
     return nonnesting_pat
 
 # 1123, 2311, 2113
-for n in range(7):
+for value in range(7):
     start_time = time.time()
-    print(len(nonnesting_avoid(n, [0b01011011, 0b10110101, 0b10010111])))
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print(len(nonnesting_avoid(value, [0b01011011, 0b10110101, 0b10010111])))
+    print(f"--- {time.time() - start_time} seconds ---")
